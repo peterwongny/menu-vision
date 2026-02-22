@@ -10,7 +10,7 @@ import boto3
 
 from backend.models import DishRecord
 
-MODEL_ID = "anthropic.claude-3-haiku-20240307-v1:0"
+MODEL_ID = "anthropic.claude-haiku-4-5-20251001-v1:0"
 
 SYSTEM_PROMPT = """You are a menu analysis assistant. Given raw text extracted from a restaurant menu via OCR, identify each individual dish and extract structured information.
 

@@ -62,5 +62,5 @@ npx aws-cdk deploy
 
 - Python 3.12, React 18, TypeScript, Vite
 - AWS: Lambda, API Gateway, S3, CloudFront, Cognito, Textract, Bedrock
-- Models: Claude 3 Haiku (text), Stability AI Stable Image Core (images)
+- Models: Claude Haiku 4.5 (text), Stability AI Stable Image Core (images)
 - Testing: pytest, Hypothesis (property-based), Vitest, fast-check
