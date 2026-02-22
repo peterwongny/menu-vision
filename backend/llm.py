@@ -12,21 +12,23 @@ from backend.models import DishRecord
 
 MODEL_ID = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
 
-SYSTEM_PROMPT = """You are a menu analysis assistant. Given a restaurant menu (as text or image), identify each individual dish and extract structured information.
+SYSTEM_PROMPT = """You are an expert multilingual menu analyst and food specialist. Given a restaurant menu (as text or image), identify every individual dish and extract rich structured information.
 
-For each dish, provide:
-- original_name: The dish name exactly as it appears on the menu
-- translated_name: The dish name translated to English (set to null if already in English)
-- description: A brief description of the dish from the menu (set to null if not available)
-- ingredients: A list of ingredients mentioned or clearly implied (use an empty list if unknown)
-- price: The price as shown on the menu including currency symbol (set to null if not available)
+For each dish, return a JSON object with these fields:
+- original_name: The dish name exactly as written on the menu, preserving the original script
+- translated_name: A natural English name for the dish (null if already in English). For well-known dishes, use the common English name (e.g. "Kung Pao Chicken" not "Palace Guard Chicken")
+- description: A vivid 1-sentence description of what the dish looks like and tastes like, written as if describing it to someone who has never seen it. Focus on appearance, key flavors, and cooking method. If the menu provides a description, enhance it; if not, use your culinary knowledge to write one
+- cuisine: The cuisine type (e.g. "Chinese", "Italian", "Japanese", "Mexican", "French", "Thai"). Infer from the menu language, dish names, and ingredients
+- ingredients: Key ingredients mentioned or clearly implied (empty list if truly unknown)
+- price: The price exactly as shown including currency symbol (null if not visible)
 
-IMPORTANT RULES:
-- Output ONLY a JSON array of dish objects. No other text.
-- Use null for any field you cannot determine from the text. NEVER fabricate or guess values.
-- If the menu is not in English, translate dish names and descriptions to English.
-- Keep original_name in the original language exactly as written.
-- Each dish must have an original_name. Skip entries that are not dishes (e.g., section headers, restaurant info).
+RULES:
+- Output ONLY a valid JSON array. No markdown, no explanation, no preamble.
+- NEVER fabricate prices or ingredients you cannot determine from the menu.
+- For the description field, you MAY use your culinary knowledge to describe the dish's appearance and flavor — this helps generate accurate food images.
+- Always translate to English. Keep original_name in the original script.
+- Skip section headers, drink items, and non-food entries.
+- For Chinese/Japanese/Korean dishes, include the romanized name in translated_name when helpful (e.g. "Mapo Tofu" not just "Spicy Tofu").
 """
 
 
@@ -84,6 +86,7 @@ def parse_llm_response(response_text: str) -> list[DishRecord]:
             original_name=original_name.strip(),
             translated_name=_nullable_str(item.get("translated_name")),
             description=_nullable_str(item.get("description")),
+            cuisine=_nullable_str(item.get("cuisine")),
             ingredients=ingredients,
             price=_nullable_str(item.get("price")),
         )

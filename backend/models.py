@@ -19,6 +19,7 @@ class DishRecord:
     original_name: str
     translated_name: Optional[str] = None
     description: Optional[str] = None
+    cuisine: Optional[str] = None
     ingredients: list[str] = field(default_factory=list)
     price: Optional[str] = None
     image_url: Optional[str] = None
@@ -28,6 +29,7 @@ class DishRecord:
             "original_name": self.original_name,
             "translated_name": self.translated_name,
             "description": self.description,
+            "cuisine": self.cuisine,
             "ingredients": list(self.ingredients),
             "price": self.price,
             "image_url": self.image_url,
@@ -39,6 +41,7 @@ class DishRecord:
             original_name=data["original_name"],
             translated_name=data.get("translated_name"),
             description=data.get("description"),
+            cuisine=data.get("cuisine"),
             ingredients=list(data.get("ingredients", [])),
             price=data.get("price"),
             image_url=data.get("image_url"),

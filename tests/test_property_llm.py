@@ -20,6 +20,7 @@ dish_json_strategy = st.fixed_dictionaries(
     optional={
         "translated_name": st.one_of(st.none(), st.text(min_size=1).filter(lambda s: s.strip())),
         "description": st.one_of(st.none(), st.text(min_size=1).filter(lambda s: s.strip())),
+        "cuisine": st.one_of(st.none(), st.text(min_size=1).filter(lambda s: s.strip())),
         "ingredients": st.lists(st.text(min_size=1), max_size=15),
         "price": st.one_of(st.none(), st.text(min_size=1).filter(lambda s: s.strip())),
     },
@@ -56,6 +57,11 @@ def test_llm_response_parsing_produces_complete_dish_records(
         # description is either a non-empty string or None
         assert dish.description is None or (
             isinstance(dish.description, str) and len(dish.description) > 0
+        )
+
+        # cuisine is either a non-empty string or None
+        assert dish.cuisine is None or (
+            isinstance(dish.cuisine, str) and len(dish.cuisine) > 0
         )
 
         # ingredients is a list of strings (possibly empty)

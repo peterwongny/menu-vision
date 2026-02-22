@@ -9,6 +9,7 @@ class TestDishRecord:
             original_name="Boeuf Bourguignon",
             translated_name="Beef Burgundy",
             description="Slow-braised beef in red wine",
+            cuisine="French",
             ingredients=["beef", "red wine", "carrots"],
             price="€24.50",
             image_url="https://example.com/dish.png",
@@ -18,6 +19,7 @@ class TestDishRecord:
             "original_name": "Boeuf Bourguignon",
             "translated_name": "Beef Burgundy",
             "description": "Slow-braised beef in red wine",
+            "cuisine": "French",
             "ingredients": ["beef", "red wine", "carrots"],
             "price": "€24.50",
             "image_url": "https://example.com/dish.png",
@@ -44,6 +46,7 @@ class TestDishRecord:
         assert dish.original_name == "Soup"
         assert dish.translated_name is None
         assert dish.description is None
+        assert dish.cuisine is None
         assert dish.ingredients == []
         assert dish.price is None
         assert dish.image_url is None
@@ -53,6 +56,7 @@ class TestDishRecord:
             original_name="Crème Brûlée",
             translated_name="Burnt Cream",
             description="Custard with caramelized sugar",
+            cuisine="French",
             ingredients=["cream", "sugar", "vanilla", "eggs"],
             price="€12",
             image_url="https://example.com/creme.png",

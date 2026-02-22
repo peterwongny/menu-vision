@@ -29,22 +29,32 @@ class ImageGenerationError(Exception):
 
 def build_image_prompt(dish: DishRecord) -> str:
     """
-    Constructs an optimized prompt for the image generator.
-    Combines dish name, description, and ingredients into a
-    photorealistic food photography prompt.
+    Constructs a cuisine-aware, richly descriptive prompt for the image generator.
+    Uses the dish's cuisine, description, and ingredients to guide the model
+    toward an authentic, photorealistic result.
     """
     name = dish.translated_name if dish.translated_name else dish.original_name
+    cuisine = dish.cuisine or ""
 
-    parts = [f"Professional food photography of {name}."]
+    # Lead with cuisine context so the model anchors on the right visual style
+    if cuisine:
+        parts = [f"Professional food photography of authentic {cuisine} dish: {name}."]
+    else:
+        parts = [f"Professional food photography of {name}."]
 
     if dish.description:
-        parts.append(f"{dish.description}.")
+        parts.append(dish.description)
 
     if dish.ingredients:
-        parts.append(f"Ingredients: {', '.join(dish.ingredients)}.")
+        parts.append(f"Made with {', '.join(dish.ingredients)}.")
+
+    # Cuisine-specific styling cues
+    if cuisine:
+        parts.append(f"Served in traditional {cuisine} style with appropriate plating and tableware.")
 
     parts.append(
-        "Photorealistic, high quality, restaurant presentation, soft lighting."
+        "Shot from 45-degree angle, shallow depth of field, warm natural lighting, "
+        "on a clean restaurant table, 4K, ultra detailed."
     )
 
     return " ".join(parts)

@@ -23,13 +23,15 @@ class TestBuildImagePrompt:
             original_name="Boeuf Bourguignon",
             translated_name="Beef Burgundy",
             description="Slow-braised beef in red wine",
+            cuisine="French",
             ingredients=["beef", "red wine", "carrots"],
         )
         prompt = build_image_prompt(dish)
-        assert "Professional food photography of Beef Burgundy." in prompt
-        assert "Slow-braised beef in red wine." in prompt
-        assert "Ingredients: beef, red wine, carrots." in prompt
-        assert "Photorealistic, high quality, restaurant presentation, soft lighting." in prompt
+        assert "authentic French dish: Beef Burgundy" in prompt
+        assert "Slow-braised beef in red wine" in prompt
+        assert "Made with beef, red wine, carrots." in prompt
+        assert "traditional French style" in prompt
+        assert "45-degree angle" in prompt
 
     def test_uses_translated_name_when_available(self):
         dish = DishRecord(
@@ -48,22 +50,26 @@ class TestBuildImagePrompt:
     def test_no_description(self):
         dish = DishRecord(original_name="Pasta", description=None)
         prompt = build_image_prompt(dish)
-        # Should not have an empty sentence or "None"
         assert "None" not in prompt
-        assert "Professional food photography of Pasta." in prompt
+        assert "Pasta" in prompt
 
     def test_no_ingredients(self):
         dish = DishRecord(original_name="Soup", ingredients=[])
         prompt = build_image_prompt(dish)
-        assert "Ingredients:" not in prompt
+        assert "Made with" not in prompt
 
-    def test_minimal_dish_only_name(self):
+    def test_no_cuisine_omits_cuisine_styling(self):
         dish = DishRecord(original_name="Bread")
         prompt = build_image_prompt(dish)
-        assert prompt == (
-            "Professional food photography of Bread. "
-            "Photorealistic, high quality, restaurant presentation, soft lighting."
-        )
+        assert "authentic" not in prompt
+        assert "traditional" not in prompt
+        assert "Professional food photography of Bread." in prompt
+
+    def test_cuisine_adds_styling_cues(self):
+        dish = DishRecord(original_name="麻婆豆腐", translated_name="Mapo Tofu", cuisine="Chinese")
+        prompt = build_image_prompt(dish)
+        assert "authentic Chinese dish: Mapo Tofu" in prompt
+        assert "traditional Chinese style" in prompt
 
 
 # --- generate_dish_image tests ---

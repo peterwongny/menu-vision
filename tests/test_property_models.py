@@ -12,6 +12,7 @@ dish_record_strategy = st.builds(
     original_name=st.text(min_size=1),
     translated_name=st.one_of(st.none(), st.text()),
     description=st.one_of(st.none(), st.text()),
+    cuisine=st.one_of(st.none(), st.text()),
     ingredients=st.lists(st.text()),
     price=st.one_of(st.none(), st.text()),
     image_url=st.one_of(st.none(), st.text()),

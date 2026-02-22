@@ -2,6 +2,7 @@ export interface DishRecord {
   original_name: string;
   translated_name: string | null;
   description: string | null;
+  cuisine: string | null;
   ingredients: string[];
   price: string | null;
   image_url: string | null;
