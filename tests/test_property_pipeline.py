@@ -6,8 +6,8 @@ from unittest.mock import patch
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from menu_vision.models import DishRecord, JobStatus
-from menu_vision.pipeline import PLACEHOLDER_IMAGE_URL, run_pipeline
+from backend.models import DishRecord, JobStatus
+from backend.pipeline import PLACEHOLDER_IMAGE_URL, run_pipeline
 
 
 # Strategy: generate a random list of DishRecord objects (1-20 dishes)
@@ -49,10 +49,10 @@ def test_partial_results_on_pipeline_dish_failure(
     ]
 
     with (
-        patch("menu_vision.pipeline.extract_text", return_value="dummy ocr text"),
-        patch("menu_vision.pipeline.structure_menu", return_value=dishes),
+        patch("backend.pipeline.extract_text", return_value="dummy ocr text"),
+        patch("backend.pipeline.structure_menu", return_value=dishes),
         patch(
-            "menu_vision.pipeline.generate_all_dish_images",
+            "backend.pipeline.generate_all_dish_images",
             return_value=image_results,
         ),
     ):

@@ -8,7 +8,7 @@ import os
 
 import boto3
 
-from menu_vision.storage import get_results
+from backend.storage import get_results
 
 logger = logging.getLogger(__name__)
 

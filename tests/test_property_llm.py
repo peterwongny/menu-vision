@@ -6,8 +6,8 @@ import json
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from menu_vision.llm import parse_llm_response
-from menu_vision.models import DishRecord
+from backend.llm import parse_llm_response
+from backend.models import DishRecord
 
 # Strategy for a single dish object conforming to the LLM output schema
 dish_json_strategy = st.fixed_dictionaries(

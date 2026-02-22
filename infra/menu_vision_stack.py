@@ -75,7 +75,7 @@ class MenuVisionStack(Stack):
         # Lambda Functions
         # ---------------------------------------------------------------
 
-        # All Lambdas use the menu_vision package from the parent directory.
+        # All Lambdas use the backend package from the parent directory.
         lambda_code = _lambda.Code.from_asset(
             path="..",
             exclude=["infra", ".kiro", ".hypothesis", ".pytest_cache", "tests", "**/__pycache__"],
@@ -85,7 +85,7 @@ class MenuVisionStack(Stack):
             self,
             "SubmitLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
-            handler="menu_vision.handlers.submit.handler",
+            handler="backend.handlers.submit.handler",
             code=lambda_code,
             memory_size=256,
             timeout=Duration.seconds(30),
@@ -99,7 +99,7 @@ class MenuVisionStack(Stack):
             self,
             "ProcessingLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
-            handler="menu_vision.handlers.process.handler",
+            handler="backend.handlers.process.handler",
             code=lambda_code,
             memory_size=1024,
             timeout=Duration.seconds(900),
@@ -114,7 +114,7 @@ class MenuVisionStack(Stack):
             self,
             "StatusLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
-            handler="menu_vision.handlers.status.handler",
+            handler="backend.handlers.status.handler",
             code=lambda_code,
             memory_size=256,
             timeout=Duration.seconds(30),

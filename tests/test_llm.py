@@ -6,12 +6,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from menu_vision.llm import (
+from backend.llm import (
     LLMProcessingError,
     parse_llm_response,
     structure_menu,
 )
-from menu_vision.models import DishRecord
+from backend.models import DishRecord
 
 
 class TestParseLlmResponse:

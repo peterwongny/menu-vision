@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import MagicMock
 
-from menu_vision.ocr import extract_text, OCRExtractionError
+from backend.ocr import extract_text, OCRExtractionError
 
 
 class TestExtractText:

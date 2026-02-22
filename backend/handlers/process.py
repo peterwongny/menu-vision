@@ -10,11 +10,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import boto3
 from botocore.config import Config
 
-from menu_vision.image_gen import MAX_WORKERS, _generate_with_retry
-from menu_vision.llm import LLMProcessingError, structure_menu
-from menu_vision.models import JobStatus, MenuResult
-from menu_vision.ocr import OCRExtractionError, extract_text
-from menu_vision.storage import store_image, store_results
+from backend.image_gen import MAX_WORKERS, _generate_with_retry
+from backend.llm import LLMProcessingError, structure_menu
+from backend.models import JobStatus, MenuResult
+from backend.ocr import OCRExtractionError, extract_text
+from backend.storage import store_image, store_results
 
 logger = logging.getLogger(__name__)
 

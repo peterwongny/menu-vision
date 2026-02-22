@@ -6,12 +6,12 @@ import json
 
 import pytest
 
-from menu_vision.image_gen import (
+from backend.image_gen import (
     ImageGenerationError,
     build_image_prompt,
     generate_dish_image,
 )
-from menu_vision.models import DishRecord
+from backend.models import DishRecord
 
 
 # --- build_image_prompt tests ---
@@ -186,7 +186,7 @@ from unittest.mock import patch
 
 from botocore.exceptions import ClientError
 
-from menu_vision.image_gen import (
+from backend.image_gen import (
     MAX_WORKERS,
     _BASE_DELAY,
     _MAX_RETRIES,
@@ -313,7 +313,7 @@ class TestGenerateWithRetry:
         assert idx == 0
         assert img is None
 
-    @patch("menu_vision.image_gen.time.sleep")
+    @patch("backend.image_gen.time.sleep")
     def test_throttling_retries_with_backoff(self, mock_sleep):
         """On ThrottlingException, should retry with exponential backoff."""
         throttle_err = _make_throttling_error()
@@ -344,7 +344,7 @@ class TestGenerateWithRetry:
         mock_sleep.assert_any_call(_BASE_DELAY * 1)   # 2^0
         mock_sleep.assert_any_call(_BASE_DELAY * 2)    # 2^1
 
-    @patch("menu_vision.image_gen.time.sleep")
+    @patch("backend.image_gen.time.sleep")
     def test_throttling_exhausts_retries_returns_none(self, mock_sleep):
         """If all retries are exhausted due to throttling, return None."""
         throttle_err = _make_throttling_error()

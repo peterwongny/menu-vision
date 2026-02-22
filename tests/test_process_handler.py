@@ -9,9 +9,9 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from menu_vision.handlers.process import handler
-from menu_vision.models import DishRecord, JobStatus
-from menu_vision.storage import get_results
+from backend.handlers.process import handler
+from backend.models import DishRecord, JobStatus
+from backend.storage import get_results
 
 UPLOAD_BUCKET = "test-uploads"
 IMAGES_BUCKET = "test-images"

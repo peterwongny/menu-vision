@@ -9,7 +9,7 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
 
-from menu_vision.models import MenuResult
+from backend.models import MenuResult
 
 _S3_CONFIG = Config(signature_version="s3v4")
 

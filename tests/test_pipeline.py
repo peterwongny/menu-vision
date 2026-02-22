@@ -3,10 +3,10 @@
 from unittest.mock import MagicMock, patch
 import pytest
 
-from menu_vision.models import DishRecord, JobStatus, MenuResult
-from menu_vision.ocr import OCRExtractionError
-from menu_vision.llm import LLMProcessingError
-from menu_vision.pipeline import PLACEHOLDER_IMAGE_URL, run_pipeline
+from backend.models import DishRecord, JobStatus, MenuResult
+from backend.ocr import OCRExtractionError
+from backend.llm import LLMProcessingError
+from backend.pipeline import PLACEHOLDER_IMAGE_URL, run_pipeline
 
 
 def _make_dishes(n: int) -> list[DishRecord]:
@@ -26,9 +26,9 @@ class TestRunPipelineSuccess:
         image_results = [(0, b"png0"), (1, b"png1")]
 
         with (
-            patch("menu_vision.pipeline.extract_text", return_value="raw text"),
-            patch("menu_vision.pipeline.structure_menu", return_value=dishes),
-            patch("menu_vision.pipeline.generate_all_dish_images", return_value=image_results),
+            patch("backend.pipeline.extract_text", return_value="raw text"),
+            patch("backend.pipeline.structure_menu", return_value=dishes),
+            patch("backend.pipeline.generate_all_dish_images", return_value=image_results),
         ):
             result = run_pipeline(str(img_file))
 
@@ -43,9 +43,9 @@ class TestRunPipelineSuccess:
         image_results = [(0, b"png0")]
 
         with (
-            patch("menu_vision.pipeline.extract_text", return_value="raw text"),
-            patch("menu_vision.pipeline.structure_menu", return_value=dishes),
-            patch("menu_vision.pipeline.generate_all_dish_images", return_value=image_results),
+            patch("backend.pipeline.extract_text", return_value="raw text"),
+            patch("backend.pipeline.structure_menu", return_value=dishes),
+            patch("backend.pipeline.generate_all_dish_images", return_value=image_results),
         ):
             result = run_pipeline(image_bytes=b"fake-image")
 
@@ -57,8 +57,8 @@ class TestRunPipelineSuccess:
         img_file.write_bytes(b"fake-image")
 
         with (
-            patch("menu_vision.pipeline.extract_text", return_value="raw text"),
-            patch("menu_vision.pipeline.structure_menu", return_value=[]),
+            patch("backend.pipeline.extract_text", return_value="raw text"),
+            patch("backend.pipeline.structure_menu", return_value=[]),
         ):
             result = run_pipeline(str(img_file))
 
@@ -79,9 +79,9 @@ class TestRunPipelinePartial:
         image_results = [(0, b"png0"), (1, None), (2, b"png2")]
 
         with (
-            patch("menu_vision.pipeline.extract_text", return_value="raw text"),
-            patch("menu_vision.pipeline.structure_menu", return_value=dishes),
-            patch("menu_vision.pipeline.generate_all_dish_images", return_value=image_results),
+            patch("backend.pipeline.extract_text", return_value="raw text"),
+            patch("backend.pipeline.structure_menu", return_value=dishes),
+            patch("backend.pipeline.generate_all_dish_images", return_value=image_results),
         ):
             result = run_pipeline(str(img_file))
 
@@ -99,9 +99,9 @@ class TestRunPipelinePartial:
         image_results = [(0, None), (1, None)]
 
         with (
-            patch("menu_vision.pipeline.extract_text", return_value="raw text"),
-            patch("menu_vision.pipeline.structure_menu", return_value=dishes),
-            patch("menu_vision.pipeline.generate_all_dish_images", return_value=image_results),
+            patch("backend.pipeline.extract_text", return_value="raw text"),
+            patch("backend.pipeline.structure_menu", return_value=dishes),
+            patch("backend.pipeline.generate_all_dish_images", return_value=image_results),
         ):
             result = run_pipeline(str(img_file))
 
@@ -119,7 +119,7 @@ class TestRunPipelineFailed:
         img_file.write_bytes(b"fake-image")
 
         with patch(
-            "menu_vision.pipeline.extract_text",
+            "backend.pipeline.extract_text",
             side_effect=OCRExtractionError("no text"),
         ):
             result = run_pipeline(str(img_file))
@@ -132,9 +132,9 @@ class TestRunPipelineFailed:
         img_file.write_bytes(b"fake-image")
 
         with (
-            patch("menu_vision.pipeline.extract_text", return_value="raw text"),
+            patch("backend.pipeline.extract_text", return_value="raw text"),
             patch(
-                "menu_vision.pipeline.structure_menu",
+                "backend.pipeline.structure_menu",
                 side_effect=LLMProcessingError("bad json"),
             ),
         ):
@@ -170,9 +170,9 @@ class TestRunPipelineTimeout:
             return "raw text"
 
         with (
-            patch("menu_vision.pipeline.extract_text", side_effect=slow_extract),
-            patch("menu_vision.pipeline.structure_menu", return_value=dishes),
-            patch("menu_vision.pipeline.time") as mock_time,
+            patch("backend.pipeline.extract_text", side_effect=slow_extract),
+            patch("backend.pipeline.structure_menu", return_value=dishes),
+            patch("backend.pipeline.time") as mock_time,
         ):
             # Simulate: start=0, after OCR+LLM=800 (past 720 threshold)
             mock_time.monotonic.side_effect = [0.0, 800.0]
@@ -193,8 +193,8 @@ class TestRunPipelineJobId:
         img_file.write_bytes(b"fake-image")
 
         with (
-            patch("menu_vision.pipeline.extract_text", return_value="raw text"),
-            patch("menu_vision.pipeline.structure_menu", return_value=[]),
+            patch("backend.pipeline.extract_text", return_value="raw text"),
+            patch("backend.pipeline.structure_menu", return_value=[]),
         ):
             r1 = run_pipeline(str(img_file))
             r2 = run_pipeline(str(img_file))
@@ -215,9 +215,9 @@ class TestRunPipelineDI:
         image_results = [(0, b"png0")]
 
         with (
-            patch("menu_vision.pipeline.extract_text", return_value="raw text") as mock_ocr,
-            patch("menu_vision.pipeline.structure_menu", return_value=dishes) as mock_llm,
-            patch("menu_vision.pipeline.generate_all_dish_images", return_value=image_results) as mock_img,
+            patch("backend.pipeline.extract_text", return_value="raw text") as mock_ocr,
+            patch("backend.pipeline.structure_menu", return_value=dishes) as mock_llm,
+            patch("backend.pipeline.generate_all_dish_images", return_value=image_results) as mock_img,
         ):
             run_pipeline(
                 image_bytes=b"fake",

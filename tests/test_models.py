@@ -1,6 +1,6 @@
 """Unit tests for data models."""
 
-from menu_vision.models import DishRecord, MenuResult, JobStatus, ProcessingJob
+from backend.models import DishRecord, MenuResult, JobStatus, ProcessingJob
 
 
 class TestDishRecord:

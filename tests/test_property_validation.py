@@ -11,7 +11,7 @@ import json
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
-from menu_vision.handlers.validation import (
+from backend.handlers.validation import (
     validate_submit_request,
     validate_status_request,
 )

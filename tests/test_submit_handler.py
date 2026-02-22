@@ -7,9 +7,9 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from menu_vision.handlers.submit import handler
-from menu_vision.storage import get_results
-from menu_vision.models import JobStatus
+from backend.handlers.submit import handler
+from backend.storage import get_results
+from backend.models import JobStatus
 
 UPLOAD_BUCKET = "test-uploads"
 RESULTS_BUCKET = "test-results"

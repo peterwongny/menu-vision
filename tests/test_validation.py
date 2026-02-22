@@ -2,7 +2,7 @@
 
 import json
 
-from menu_vision.handlers.validation import (
+from backend.handlers.validation import (
     validate_status_request,
     validate_submit_request,
 )

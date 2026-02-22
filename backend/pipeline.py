@@ -7,10 +7,10 @@ import time
 import uuid
 from typing import Optional
 
-from menu_vision.image_gen import generate_all_dish_images
-from menu_vision.llm import LLMProcessingError, structure_menu
-from menu_vision.models import DishRecord, JobStatus, MenuResult
-from menu_vision.ocr import OCRExtractionError, extract_text
+from backend.image_gen import generate_all_dish_images
+from backend.llm import LLMProcessingError, structure_menu
+from backend.models import DishRecord, JobStatus, MenuResult
+from backend.ocr import OCRExtractionError, extract_text
 
 logger = logging.getLogger(__name__)
 

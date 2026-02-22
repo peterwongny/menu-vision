@@ -1,7 +1,7 @@
 """Local CLI entry point for Menu Vision pipeline.
 
 Usage:
-    python -m menu_vision --image menu.jpg --output ./results/
+    python -m backend --image menu.jpg --output ./results/
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import json
 import os
 import sys
 
-from menu_vision.pipeline import run_pipeline
+from backend.pipeline import run_pipeline
 
 
 def main() -> None:

@@ -25,4 +25,4 @@ testpaths = ["tests"]
 pythonpath = ["."]
 
 [tool.setuptools.packages.find]
-include = ["menu_vision*"]
+include = ["backend*"]

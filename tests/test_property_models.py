@@ -4,7 +4,7 @@
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from menu_vision.models import DishRecord
+from backend.models import DishRecord
 
 
 dish_record_strategy = st.builds(

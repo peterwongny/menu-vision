@@ -9,8 +9,8 @@ import uuid
 import boto3
 from botocore.config import Config
 
-from menu_vision.models import JobStatus, MenuResult
-from menu_vision.storage import store_results
+from backend.models import JobStatus, MenuResult
+from backend.storage import store_results
 
 _s3_client = None
 

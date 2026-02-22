@@ -1,4 +1,4 @@
-"""Unit tests for the local CLI entry point (menu_vision/__main__.py)."""
+"""Unit tests for the local CLI entry point (backend/__main__.py)."""
 
 from unittest.mock import patch
 import json
@@ -7,8 +7,8 @@ import sys
 
 import pytest
 
-from menu_vision.__main__ import main
-from menu_vision.models import DishRecord, JobStatus, MenuResult
+from backend.__main__ import main
+from backend.models import DishRecord, JobStatus, MenuResult
 
 
 def _make_result(dishes=None, status=JobStatus.COMPLETED, error_message=None):
@@ -22,14 +22,14 @@ def _make_result(dishes=None, status=JobStatus.COMPLETED, error_message=None):
 
 class TestCLIArgParsing:
     def test_missing_image_arg_exits(self):
-        with patch("sys.argv", ["menu_vision"]):
+        with patch("sys.argv", ["backend"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 2  # argparse error
 
     def test_nonexistent_image_exits(self, tmp_path):
         fake_path = str(tmp_path / "nope.jpg")
-        with patch("sys.argv", ["menu_vision", "--image", fake_path]):
+        with patch("sys.argv", ["backend", "--image", fake_path]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 1
@@ -48,8 +48,8 @@ class TestCLIOutputs:
         result = _make_result(dishes=dishes)
 
         with (
-            patch("sys.argv", ["menu_vision", "--image", str(img), "--output", str(out_dir)]),
-            patch("menu_vision.__main__.run_pipeline", return_value=result),
+            patch("sys.argv", ["backend", "--image", str(img), "--output", str(out_dir)]),
+            patch("backend.__main__.run_pipeline", return_value=result),
         ):
             main()
 
@@ -69,8 +69,8 @@ class TestCLIOutputs:
         result = _make_result()
 
         with (
-            patch("sys.argv", ["menu_vision", "--image", str(img), "--output", str(out_dir)]),
-            patch("menu_vision.__main__.run_pipeline", return_value=result),
+            patch("sys.argv", ["backend", "--image", str(img), "--output", str(out_dir)]),
+            patch("backend.__main__.run_pipeline", return_value=result),
         ):
             main()
 
@@ -85,8 +85,8 @@ class TestCLIOutputs:
         result = _make_result()
 
         with (
-            patch("sys.argv", ["menu_vision", "--image", str(img)]),
-            patch("menu_vision.__main__.run_pipeline", return_value=result),
+            patch("sys.argv", ["backend", "--image", str(img)]),
+            patch("backend.__main__.run_pipeline", return_value=result),
         ):
             main()
 
@@ -106,8 +106,8 @@ class TestCLISummary:
         result = _make_result(dishes=dishes)
 
         with (
-            patch("sys.argv", ["menu_vision", "--image", str(img), "--output", str(out_dir)]),
-            patch("menu_vision.__main__.run_pipeline", return_value=result),
+            patch("sys.argv", ["backend", "--image", str(img), "--output", str(out_dir)]),
+            patch("backend.__main__.run_pipeline", return_value=result),
         ):
             main()
 
@@ -126,8 +126,8 @@ class TestCLISummary:
         result = _make_result(status=JobStatus.FAILED, error_message="OCR failed")
 
         with (
-            patch("sys.argv", ["menu_vision", "--image", str(img), "--output", str(out_dir)]),
-            patch("menu_vision.__main__.run_pipeline", return_value=result),
+            patch("sys.argv", ["backend", "--image", str(img), "--output", str(out_dir)]),
+            patch("backend.__main__.run_pipeline", return_value=result),
         ):
             main()
 
@@ -143,8 +143,8 @@ class TestCLISummary:
         result = _make_result(dishes=dishes)
 
         with (
-            patch("sys.argv", ["menu_vision", "--image", str(img), "--output", str(out_dir)]),
-            patch("menu_vision.__main__.run_pipeline", return_value=result),
+            patch("sys.argv", ["backend", "--image", str(img), "--output", str(out_dir)]),
+            patch("backend.__main__.run_pipeline", return_value=result),
         ):
             main()
 

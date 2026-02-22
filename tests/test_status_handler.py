@@ -7,9 +7,9 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from menu_vision.handlers.status import handler
-from menu_vision.models import DishRecord, JobStatus, MenuResult
-from menu_vision.storage import store_results
+from backend.handlers.status import handler
+from backend.models import DishRecord, JobStatus, MenuResult
+from backend.storage import store_results
 
 RESULTS_BUCKET = "test-results"
 JOB_ID = "test-job-123"

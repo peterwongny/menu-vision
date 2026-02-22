@@ -8,7 +8,7 @@ from typing import Optional
 
 import boto3
 
-from menu_vision.models import DishRecord
+from backend.models import DishRecord
 
 MODEL_ID = "anthropic.claude-3-haiku-20240307-v1:0"
 
