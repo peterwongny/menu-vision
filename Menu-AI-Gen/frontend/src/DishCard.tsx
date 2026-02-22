@@ -5,10 +5,16 @@ interface DishCardProps {
 }
 
 export default function DishCard({ dish }: DishCardProps) {
+  const hasImage = dish.image_url && dish.image_url !== 'placeholder://no-image';
+
   return (
     <article className="dish-card">
-      {dish.image_url && (
-        <img src={dish.image_url} alt={dish.original_name} loading="lazy" />
+      {hasImage ? (
+        <img src={dish.image_url!} alt={dish.original_name} loading="lazy" />
+      ) : (
+        <div className="dish-image-placeholder" aria-label="Image loading">
+          <div className="spinner spinner-small" />
+        </div>
       )}
       <div className="dish-card-body">
         <h3>{dish.original_name}</h3>

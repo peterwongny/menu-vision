@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import logging
 import os
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import boto3
 from botocore.config import Config
 
-from menu_vision.image_gen import generate_all_dish_images
+from menu_vision.image_gen import MAX_WORKERS, _generate_with_retry
 from menu_vision.llm import LLMProcessingError, structure_menu
 from menu_vision.models import JobStatus, MenuResult
 from menu_vision.ocr import OCRExtractionError, extract_text
@@ -28,9 +30,8 @@ def handler(
 ) -> None:
     """
     Triggered by S3 event when image is uploaded.
-    Runs the full pipeline asynchronously.
-    Event contains S3 bucket and key from the upload event.
-    Writes MenuResult JSON to S3 when complete.
+    Runs the full pipeline with incremental result updates.
+    Writes partial MenuResult after each image so the frontend can render progressively.
     """
     if s3_client is None:
         s3_client = boto3.client("s3", config=Config(signature_version="s3v4"))
@@ -38,47 +39,78 @@ def handler(
     images_bucket = os.environ["IMAGES_BUCKET"]
     results_bucket = os.environ["RESULTS_BUCKET"]
 
-    # Extract bucket/key from S3 event
     record = event["Records"][0]["s3"]
     source_bucket = record["bucket"]["name"]
     source_key = record["object"]["key"]
-
-    # Extract job_id from key (format: {job_id}/menu_image)
     job_id = source_key.split("/")[0]
 
+    timings: dict[str, float] = {}
+
     try:
-        # Read image from S3
+        # --- S3 read ---
+        t0 = time.time()
         resp = s3_client.get_object(Bucket=source_bucket, Key=source_key)
         image_bytes = resp["Body"].read()
+        timings["s3_read"] = time.time() - t0
 
-        # OCR
+        # --- OCR ---
+        t0 = time.time()
         raw_text = extract_text(image_bytes, textract_client=textract_client)
+        timings["ocr"] = time.time() - t0
 
-        # LLM structuring
+        # --- LLM structuring ---
+        t0 = time.time()
         dishes = structure_menu(raw_text, bedrock_client=bedrock_client)
+        timings["llm"] = time.time() - t0
 
         if not dishes:
+            timings["total"] = sum(timings.values())
+            logger.info("TRACE job=%s timings=%s", job_id, timings)
             result = MenuResult(job_id=job_id, status=JobStatus.COMPLETED, dishes=[])
             store_results(results_bucket, job_id, result, s3_client=s3_client)
             return
 
-        # Parallel image generation
-        image_results = generate_all_dish_images(dishes, bedrock_client=bedrock_client)
+        # Write intermediate result so frontend can show dish names while images generate
+        intermediate = MenuResult(job_id=job_id, status=JobStatus.PROCESSING, dishes=dishes)
+        store_results(results_bucket, job_id, intermediate, s3_client=s3_client)
 
+        # --- Image generation (parallel, with incremental updates) ---
+        t0 = time.time()
         any_failed = False
-        for idx, img_bytes in image_results:
-            if img_bytes is not None:
-                url = store_image(
-                    images_bucket, job_id, idx, img_bytes, s3_client=s3_client
-                )
-                dishes[idx].image_url = url
-            else:
-                dishes[idx].image_url = PLACEHOLDER_IMAGE_URL
-                any_failed = True
+        completed_count = 0
+        total_dishes = len(dishes)
 
-        status = JobStatus.PARTIAL if any_failed else JobStatus.COMPLETED
-        result = MenuResult(job_id=job_id, status=status, dishes=dishes)
-        store_results(results_bucket, job_id, result, s3_client=s3_client)
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            futures = {
+                executor.submit(
+                    _generate_with_retry, idx, dish, bedrock_client
+                ): idx
+                for idx, dish in enumerate(dishes)
+            }
+            for future in as_completed(futures):
+                idx, img_bytes = future.result()
+                img_t0 = time.time()
+                if img_bytes is not None:
+                    url = store_image(
+                        images_bucket, job_id, idx, img_bytes, s3_client=s3_client
+                    )
+                    dishes[idx].image_url = url
+                else:
+                    dishes[idx].image_url = PLACEHOLDER_IMAGE_URL
+                    any_failed = True
+
+                completed_count += 1
+                # Write incremental update so frontend can show images as they arrive
+                inc_status = JobStatus.PROCESSING if completed_count < total_dishes else (
+                    JobStatus.PARTIAL if any_failed else JobStatus.COMPLETED
+                )
+                inc_result = MenuResult(job_id=job_id, status=inc_status, dishes=dishes)
+                store_results(results_bucket, job_id, inc_result, s3_client=s3_client)
+                timings[f"image_{idx}"] = time.time() - img_t0
+
+        timings["image_gen_total"] = time.time() - t0
+        timings["total"] = timings["s3_read"] + timings["ocr"] + timings["llm"] + timings["image_gen_total"]
+        logger.info("TRACE job=%s timings=%s", job_id, timings)
 
     except (OCRExtractionError, LLMProcessingError) as exc:
         logger.error("Pipeline failed for job %s: %s", job_id, exc)
