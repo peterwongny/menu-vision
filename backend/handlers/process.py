@@ -17,6 +17,7 @@ from backend.ocr import OCRExtractionError, extract_text
 from backend.storage import store_image, store_results
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 PLACEHOLDER_IMAGE_URL = "placeholder://no-image"
 MIN_OCR_LINES = 3  # If Textract returns fewer lines, fall back to Claude vision
@@ -32,15 +33,21 @@ def _extract_dishes(image_bytes, textract_client, bedrock_client, timings):
         timings["ocr"] = time.time() - t0
 
         line_count = len(raw_text.strip().splitlines())
+        logger.info("Textract returned %d lines", line_count)
         if line_count >= MIN_OCR_LINES:
             # Textract got enough text — use LLM to structure it
             t0 = time.time()
             dishes = structure_menu(raw_text, bedrock_client=bedrock_client)
             timings["llm"] = time.time() - t0
             timings["extraction_method"] = "textract"
-            return dishes
-        else:
-            logger.info("Textract returned only %d lines, falling back to vision", line_count)
+            logger.info("Textract path returned %d dishes", len(dishes))
+
+            # If Textract returned text but LLM found no dishes, the text was likely
+            # garbled (e.g. Chinese rendered as nonsense). Fall back to vision.
+            if not dishes and line_count > 0:
+                logger.info("Textract text yielded 0 dishes, falling back to vision")
+            else:
+                return dishes
     except OCRExtractionError:
         logger.info("Textract found no text, falling back to vision")
 
@@ -49,6 +56,7 @@ def _extract_dishes(image_bytes, textract_client, bedrock_client, timings):
     dishes = structure_menu_from_image(image_bytes, bedrock_client=bedrock_client)
     timings["vision_extract"] = time.time() - t0
     timings["extraction_method"] = "vision"
+    logger.info("Vision path returned %d dishes", len(dishes))
     return dishes
 
 
