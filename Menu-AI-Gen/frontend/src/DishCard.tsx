@@ -24,9 +24,6 @@ export default function DishCard({ dish }: DishCardProps) {
         {dish.description && (
           <p className="dish-description">{dish.description}</p>
         )}
-        {dish.ingredients.length > 0 && (
-          <p className="dish-ingredients">{dish.ingredients.join(', ')}</p>
-        )}
         {dish.price && (
           <p className="dish-price">{dish.price}</p>
         )}
