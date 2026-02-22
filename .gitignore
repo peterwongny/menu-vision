@@ -8,6 +8,8 @@ build/
 .hypothesis/
 PIL/
 Pillow*.dist-info/
+pillow.libs/
+pillow*/
 
 # Node
 node_modules/
