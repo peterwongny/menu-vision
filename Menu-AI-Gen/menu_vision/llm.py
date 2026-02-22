@@ -52,8 +52,13 @@ def parse_llm_response(response_text: str) -> list[DishRecord]:
 
     try:
         data = json.loads(text)
-    except json.JSONDecodeError as e:
-        raise LLMProcessingError(f"Failed to parse LLM response as JSON: {e}")
+    except json.JSONDecodeError:
+        # LLM response may be truncated — try to recover partial JSON array
+        data = _recover_truncated_json(text)
+        if data is None:
+            raise LLMProcessingError(
+                f"Failed to parse LLM response as JSON and could not recover partial array"
+            )
 
     if not isinstance(data, list):
         raise LLMProcessingError(
@@ -101,7 +106,7 @@ def structure_menu(
     request_body = json.dumps(
         {
             "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 4096,
+            "max_tokens": 16384,
             "system": SYSTEM_PROMPT,
             "messages": [
                 {
@@ -138,6 +143,53 @@ def structure_menu(
 
     response_text = "\n".join(text_parts)
     return parse_llm_response(response_text)
+
+
+def _recover_truncated_json(text: str) -> Optional[list]:
+    """Try to recover a truncated JSON array by finding the last complete object."""
+    # Find all complete JSON objects in the text
+    depth = 0
+    last_complete = -1
+    in_string = False
+    escape_next = False
+
+    for i, ch in enumerate(text):
+        if escape_next:
+            escape_next = False
+            continue
+        if ch == '\\' and in_string:
+            escape_next = True
+            continue
+        if ch == '"' and not escape_next:
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+            if depth == 0:
+                last_complete = i
+
+    if last_complete <= 0:
+        return None
+
+    # Truncate after the last complete object and close the array
+    truncated = text[:last_complete + 1].rstrip().rstrip(',') + ']'
+    # Ensure it starts with [
+    bracket_pos = truncated.find('[')
+    if bracket_pos == -1:
+        return None
+    truncated = truncated[bracket_pos:]
+
+    try:
+        data = json.loads(truncated)
+        if isinstance(data, list):
+            return data
+    except json.JSONDecodeError:
+        pass
+    return None
 
 
 def _nullable_str(value) -> Optional[str]:
