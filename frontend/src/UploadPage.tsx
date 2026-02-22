@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { validateFile } from './validation';
 import apiClient from './api';
+import CameraCapture from './CameraCapture';
 
 interface UploadPageProps {
   onJobCreated: (jobId: string) => void;
@@ -8,13 +9,14 @@ interface UploadPageProps {
 
 export default function UploadPage({ onJobCreated }: UploadPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [showCamera, setShowCamera] = useState(false);
 
   async function handleFile(file: File) {
     setError(null);
+    setShowCamera(false);
     const result = validateFile(file);
     if (!result.valid) {
       setError(result.error ?? 'Invalid file');
@@ -52,6 +54,15 @@ export default function UploadPage({ onJobCreated }: UploadPageProps) {
     e.target.value = '';
   }
 
+  if (showCamera) {
+    return (
+      <CameraCapture
+        onCapture={handleFile}
+        onClose={() => setShowCamera(false)}
+      />
+    );
+  }
+
   return (
     <div className="upload-page">
       <p className="upload-instructions">
@@ -61,7 +72,7 @@ export default function UploadPage({ onJobCreated }: UploadPageProps) {
       <div className="upload-buttons">
         <button
           className="btn btn-primary"
-          onClick={() => cameraInputRef.current?.click()}
+          onClick={() => setShowCamera(true)}
           disabled={uploading}
           aria-label="Take a photo with your camera"
         >
@@ -77,15 +88,6 @@ export default function UploadPage({ onJobCreated }: UploadPageProps) {
         </button>
       </div>
 
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        capture="environment"
-        onChange={onFileChange}
-        hidden
-        aria-hidden="true"
-      />
       <input
         ref={fileInputRef}
         type="file"

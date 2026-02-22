@@ -21,15 +21,52 @@ logger.setLevel(logging.INFO)
 
 PLACEHOLDER_IMAGE_URL = "placeholder://no-image"
 MIN_OCR_LINES = 3  # If Textract returns fewer lines, fall back to Claude vision
+TEXTRACT_MAX_BYTES = 5_000_000  # Textract sync API limit
+
+
+def _compress_for_textract(image_bytes: bytes) -> bytes:
+    """Compress image to fit under Textract's 5MB sync limit."""
+    import io
+    from PIL import Image
+
+    img = Image.open(io.BytesIO(image_bytes))
+    img = img.convert("RGB")
+
+    for quality in (85, 70, 50, 35):
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=quality)
+        if buf.tell() <= TEXTRACT_MAX_BYTES:
+            return buf.getvalue()
+
+    # Still too big — resize
+    for scale in (0.75, 0.5):
+        w, h = int(img.width * scale), int(img.height * scale)
+        resized = img.resize((w, h), Image.LANCZOS)
+        buf = io.BytesIO()
+        resized.save(buf, format="JPEG", quality=60)
+        if buf.tell() <= TEXTRACT_MAX_BYTES:
+            return buf.getvalue()
+
+    resized = img.resize((2048, int(2048 * img.height / img.width)), Image.LANCZOS)
+    buf = io.BytesIO()
+    resized.save(buf, format="JPEG", quality=50)
+    return buf.getvalue()
 
 
 def _extract_dishes(image_bytes, textract_client, bedrock_client, timings):
     """Try Textract OCR first; if it fails or returns too little text, fall back to Claude vision."""
 
+    # Compress for Textract if needed (5MB sync limit)
+    textract_bytes = image_bytes
+    if len(image_bytes) > TEXTRACT_MAX_BYTES:
+        logger.info("Image is %d bytes, compressing for Textract", len(image_bytes))
+        textract_bytes = _compress_for_textract(image_bytes)
+        logger.info("Compressed to %d bytes for Textract", len(textract_bytes))
+
     # --- Try Textract OCR ---
     try:
         t0 = time.time()
-        raw_text = extract_text(image_bytes, textract_client=textract_client)
+        raw_text = extract_text(textract_bytes, textract_client=textract_client)
         timings["ocr"] = time.time() - t0
 
         line_count = len(raw_text.strip().splitlines())
@@ -48,10 +85,11 @@ def _extract_dishes(image_bytes, textract_client, bedrock_client, timings):
                 logger.info("Textract text yielded 0 dishes, falling back to vision")
             else:
                 return dishes
-    except OCRExtractionError:
-        logger.info("Textract found no text, falling back to vision")
+    except (OCRExtractionError, Exception) as e:
+        logger.info("Textract failed (%s: %s), falling back to vision", type(e).__name__, e)
 
     # --- Fallback: send image directly to Claude vision ---
+    # Use original (uncompressed) image for best vision quality
     t0 = time.time()
     dishes = structure_menu_from_image(image_bytes, bedrock_client=bedrock_client)
     timings["vision_extract"] = time.time() - t0
@@ -91,6 +129,8 @@ def handler(
         resp = s3_client.get_object(Bucket=source_bucket, Key=source_key)
         image_bytes = resp["Body"].read()
         timings["s3_read"] = time.time() - t0
+
+        logger.info("Processing job=%s source_key=%s image_size=%d bytes", job_id, source_key, len(image_bytes))
 
         # --- Extract dishes (Textract → vision fallback) ---
         dishes = _extract_dishes(image_bytes, textract_client, bedrock_client, timings)
