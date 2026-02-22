@@ -76,9 +76,11 @@ class MenuVisionStack(Stack):
         # ---------------------------------------------------------------
 
         # All Lambdas use the backend package from the parent directory.
+        # Pillow is pre-installed into a lambda_deps/ directory (see deploy instructions).
         lambda_code = _lambda.Code.from_asset(
             path="..",
-            exclude=["infra", ".kiro", ".hypothesis", ".pytest_cache", "tests", "**/__pycache__"],
+            exclude=["infra", ".kiro", ".hypothesis", ".pytest_cache", "tests", "**/__pycache__",
+                      "frontend", "node_modules"],
         )
 
         submit_lambda = _lambda.Function(

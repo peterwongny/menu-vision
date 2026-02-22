@@ -6,6 +6,8 @@ dist/
 build/
 .pytest_cache/
 .hypothesis/
+PIL/
+Pillow*.dist-info/
 
 # Node
 node_modules/

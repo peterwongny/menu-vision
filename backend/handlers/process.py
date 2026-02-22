@@ -11,13 +11,45 @@ import boto3
 from botocore.config import Config
 
 from backend.image_gen import MAX_WORKERS, _generate_with_retry
-from backend.llm import LLMProcessingError, structure_menu_from_image
+from backend.llm import LLMProcessingError, structure_menu, structure_menu_from_image
 from backend.models import JobStatus, MenuResult
+from backend.ocr import OCRExtractionError, extract_text
 from backend.storage import store_image, store_results
 
 logger = logging.getLogger(__name__)
 
 PLACEHOLDER_IMAGE_URL = "placeholder://no-image"
+MIN_OCR_LINES = 3  # If Textract returns fewer lines, fall back to Claude vision
+
+
+def _extract_dishes(image_bytes, textract_client, bedrock_client, timings):
+    """Try Textract OCR first; if it fails or returns too little text, fall back to Claude vision."""
+
+    # --- Try Textract OCR ---
+    try:
+        t0 = time.time()
+        raw_text = extract_text(image_bytes, textract_client=textract_client)
+        timings["ocr"] = time.time() - t0
+
+        line_count = len(raw_text.strip().splitlines())
+        if line_count >= MIN_OCR_LINES:
+            # Textract got enough text — use LLM to structure it
+            t0 = time.time()
+            dishes = structure_menu(raw_text, bedrock_client=bedrock_client)
+            timings["llm"] = time.time() - t0
+            timings["extraction_method"] = "textract"
+            return dishes
+        else:
+            logger.info("Textract returned only %d lines, falling back to vision", line_count)
+    except OCRExtractionError:
+        logger.info("Textract found no text, falling back to vision")
+
+    # --- Fallback: send image directly to Claude vision ---
+    t0 = time.time()
+    dishes = structure_menu_from_image(image_bytes, bedrock_client=bedrock_client)
+    timings["vision_extract"] = time.time() - t0
+    timings["extraction_method"] = "vision"
+    return dishes
 
 
 def handler(
@@ -30,7 +62,7 @@ def handler(
     """
     Triggered by S3 event when image is uploaded.
     Runs the full pipeline with incremental result updates.
-    Writes partial MenuResult after each image so the frontend can render progressively.
+    Uses Textract for OCR when possible, falls back to Claude vision for unsupported scripts.
     """
     if s3_client is None:
         s3_client = boto3.client("s3", config=Config(signature_version="s3v4"))
@@ -52,13 +84,11 @@ def handler(
         image_bytes = resp["Body"].read()
         timings["s3_read"] = time.time() - t0
 
-        # --- Vision-based menu extraction (OCR + structuring in one step) ---
-        t0 = time.time()
-        dishes = structure_menu_from_image(image_bytes, bedrock_client=bedrock_client)
-        timings["vision_extract"] = time.time() - t0
+        # --- Extract dishes (Textract → vision fallback) ---
+        dishes = _extract_dishes(image_bytes, textract_client, bedrock_client, timings)
 
         if not dishes:
-            timings["total"] = sum(timings.values())
+            timings["total"] = sum(v for v in timings.values() if isinstance(v, float))
             logger.info("TRACE job=%s timings=%s", job_id, timings)
             result = MenuResult(job_id=job_id, status=JobStatus.COMPLETED, dishes=[])
             store_results(results_bucket, job_id, result, s3_client=s3_client)
@@ -94,7 +124,6 @@ def handler(
                     any_failed = True
 
                 completed_count += 1
-                # Write incremental update so frontend can show images as they arrive
                 inc_status = JobStatus.PROCESSING if completed_count < total_dishes else (
                     JobStatus.PARTIAL if any_failed else JobStatus.COMPLETED
                 )
@@ -103,10 +132,11 @@ def handler(
                 timings[f"image_{idx}"] = time.time() - img_t0
 
         timings["image_gen_total"] = time.time() - t0
-        timings["total"] = timings["s3_read"] + timings["vision_extract"] + timings["image_gen_total"]
+        extract_time = timings.get("ocr", 0) + timings.get("llm", 0) + timings.get("vision_extract", 0)
+        timings["total"] = timings["s3_read"] + extract_time + timings["image_gen_total"]
         logger.info("TRACE job=%s timings=%s", job_id, timings)
 
-    except LLMProcessingError as exc:
+    except (OCRExtractionError, LLMProcessingError) as exc:
         logger.error("Pipeline failed for job %s: %s", job_id, exc)
         error_result = MenuResult(
             job_id=job_id,

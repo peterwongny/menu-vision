@@ -150,21 +150,40 @@ class TestProcessHandler:
             )
             assert obj["Body"].read() == b"fake-png-bytes"
 
-    def test_vision_failure_writes_failed_result(self, aws_env, s3_client):
+    def test_ocr_failure_falls_back_to_vision(self, aws_env, s3_client):
+        """When Textract returns no text, should fall back to Claude vision."""
+        textract = MagicMock()
+        textract.detect_document_text.return_value = {"Blocks": []}
+
+        # Mock bedrock to handle the vision fallback
+        dishes_json = json.dumps([{"original_name": "Dish A", "ingredients": []}])
+        llm_response = {"content": [{"type": "text", "text": dishes_json}]}
+
+        import base64
+        fake_image = base64.b64encode(b"fake-png").decode()
+        image_response = {"images": [fake_image]}
+
+        def invoke_model(**kwargs):
+            body = json.loads(kwargs.get("body", "{}"))
+            if "messages" in body:
+                return {"body": BytesIO(json.dumps(llm_response).encode())}
+            return {"body": BytesIO(json.dumps(image_response).encode())}
+
         bedrock = MagicMock()
-        bedrock.invoke_model.side_effect = Exception("Bedrock down")
+        bedrock.invoke_model.side_effect = invoke_model
 
         handler(
             _s3_event(),
             None,
             s3_client=s3_client,
+            textract_client=textract,
             bedrock_client=bedrock,
         )
 
         result = get_results(RESULTS_BUCKET, JOB_ID, s3_client=s3_client)
         assert result is not None
-        assert result.status == JobStatus.FAILED
-        assert result.error_message is not None
+        assert result.status in (JobStatus.COMPLETED, JobStatus.PARTIAL)
+        assert len(result.dishes) == 1
 
     def test_llm_failure_writes_failed_result(self, aws_env, s3_client):
         bedrock = MagicMock()

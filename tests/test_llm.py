@@ -204,7 +204,7 @@ class TestStructureMenu:
         structure_menu("menu text", bedrock_client=mock_client)
 
         call_kwargs = mock_client.invoke_model.call_args[1]
-        assert call_kwargs["modelId"] == "anthropic.claude-3-haiku-20240307-v1:0"
+        assert call_kwargs["modelId"] == "us.anthropic.claude-haiku-4-5-20251001-v1:0"
 
     def test_raises_on_bedrock_api_error(self):
         """Raises LLMProcessingError when Bedrock API call fails."""

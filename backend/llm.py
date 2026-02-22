@@ -151,12 +151,20 @@ def structure_menu_from_image(
     """
     Sends a menu image directly to Claude for vision-based extraction.
     Skips OCR entirely — Claude reads the image natively.
+    Compresses image if over 4.5MB to stay under Claude's 5MB limit.
     Returns a list of structured DishRecord objects.
     """
     if bedrock_client is None:
         bedrock_client = boto3.client("bedrock-runtime")
 
     import base64
+
+    # Compress if needed to stay under Claude's 5MB image limit
+    MAX_IMAGE_SIZE = 4_500_000  # 4.5MB with margin
+    if len(image_bytes) > MAX_IMAGE_SIZE:
+        image_bytes = _compress_image(image_bytes, MAX_IMAGE_SIZE)
+        media_type = "image/jpeg"
+
     encoded = base64.b64encode(image_bytes).decode("utf-8")
 
     request_body = json.dumps(
@@ -211,6 +219,37 @@ def structure_menu_from_image(
 
     response_text = "\n".join(text_parts)
     return parse_llm_response(response_text)
+
+
+def _compress_image(image_bytes: bytes, max_size: int) -> bytes:
+    """Resize and compress an image to fit under max_size bytes."""
+    import io
+    from PIL import Image
+
+    img = Image.open(io.BytesIO(image_bytes))
+    img = img.convert("RGB")  # Ensure JPEG-compatible mode
+
+    # First try: just re-encode as JPEG with decreasing quality
+    for quality in (85, 70, 50, 30):
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=quality)
+        if buf.tell() <= max_size:
+            return buf.getvalue()
+
+    # Still too big — resize down
+    for scale in (0.75, 0.5, 0.35):
+        w, h = int(img.width * scale), int(img.height * scale)
+        resized = img.resize((w, h), Image.LANCZOS)
+        buf = io.BytesIO()
+        resized.save(buf, format="JPEG", quality=60)
+        if buf.tell() <= max_size:
+            return buf.getvalue()
+
+    # Last resort: aggressive resize
+    resized = img.resize((1024, int(1024 * img.height / img.width)), Image.LANCZOS)
+    buf = io.BytesIO()
+    resized.save(buf, format="JPEG", quality=50)
+    return buf.getvalue()
 
 
 def _recover_truncated_json(text: str) -> Optional[list]:
