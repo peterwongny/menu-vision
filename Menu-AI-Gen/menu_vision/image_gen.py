@@ -14,7 +14,7 @@ from botocore.exceptions import ClientError
 
 from menu_vision.models import DishRecord
 
-IMAGE_MODEL_ID = os.environ.get("IMAGE_MODEL_ID", "stability.stable-image-core-v1:0")
+IMAGE_MODEL_ID = os.environ.get("IMAGE_MODEL_ID", "stability.stable-image-core-v1:1")
 MAX_WORKERS = int(os.environ.get("IMAGE_GEN_WORKERS", "10"))
 
 logger = logging.getLogger(__name__)
