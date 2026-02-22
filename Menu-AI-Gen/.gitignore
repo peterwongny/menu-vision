@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.hypothesis/
+
+# Node
+node_modules/
+frontend/dist/
+
+# CDK
+infra/cdk.out/
+infra/cdk-outputs.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.local

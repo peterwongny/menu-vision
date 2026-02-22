@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "menu-vision"
+version = "0.1.0"
+description = "AI-powered restaurant menu translator and dish image generator"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3>=1.34",
+    "botocore>=1.34",
+    "Pillow>=10.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "hypothesis>=6.0",
+    "moto[s3,textract]>=5.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.setuptools.packages.find]
+include = ["menu_vision*"]
