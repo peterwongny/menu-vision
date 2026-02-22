@@ -150,25 +150,7 @@ class TestProcessHandler:
             )
             assert obj["Body"].read() == b"fake-png-bytes"
 
-    def test_ocr_failure_writes_failed_result(self, aws_env, s3_client):
-        textract = MagicMock()
-        textract.detect_document_text.return_value = {"Blocks": []}
-
-        handler(
-            _s3_event(),
-            None,
-            s3_client=s3_client,
-            textract_client=textract,
-            bedrock_client=MagicMock(),
-        )
-
-        result = get_results(RESULTS_BUCKET, JOB_ID, s3_client=s3_client)
-        assert result is not None
-        assert result.status == JobStatus.FAILED
-        assert "no text detected" in result.error_message.lower()
-
-    def test_llm_failure_writes_failed_result(self, aws_env, s3_client):
-        textract = _mock_textract()
+    def test_vision_failure_writes_failed_result(self, aws_env, s3_client):
         bedrock = MagicMock()
         bedrock.invoke_model.side_effect = Exception("Bedrock down")
 
@@ -176,7 +158,22 @@ class TestProcessHandler:
             _s3_event(),
             None,
             s3_client=s3_client,
-            textract_client=textract,
+            bedrock_client=bedrock,
+        )
+
+        result = get_results(RESULTS_BUCKET, JOB_ID, s3_client=s3_client)
+        assert result is not None
+        assert result.status == JobStatus.FAILED
+        assert result.error_message is not None
+
+    def test_llm_failure_writes_failed_result(self, aws_env, s3_client):
+        bedrock = MagicMock()
+        bedrock.invoke_model.side_effect = Exception("Bedrock down")
+
+        handler(
+            _s3_event(),
+            None,
+            s3_client=s3_client,
             bedrock_client=bedrock,
         )
 

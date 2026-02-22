@@ -11,9 +11,8 @@ import boto3
 from botocore.config import Config
 
 from backend.image_gen import MAX_WORKERS, _generate_with_retry
-from backend.llm import LLMProcessingError, structure_menu
+from backend.llm import LLMProcessingError, structure_menu_from_image
 from backend.models import JobStatus, MenuResult
-from backend.ocr import OCRExtractionError, extract_text
 from backend.storage import store_image, store_results
 
 logger = logging.getLogger(__name__)
@@ -53,15 +52,10 @@ def handler(
         image_bytes = resp["Body"].read()
         timings["s3_read"] = time.time() - t0
 
-        # --- OCR ---
+        # --- Vision-based menu extraction (OCR + structuring in one step) ---
         t0 = time.time()
-        raw_text = extract_text(image_bytes, textract_client=textract_client)
-        timings["ocr"] = time.time() - t0
-
-        # --- LLM structuring ---
-        t0 = time.time()
-        dishes = structure_menu(raw_text, bedrock_client=bedrock_client)
-        timings["llm"] = time.time() - t0
+        dishes = structure_menu_from_image(image_bytes, bedrock_client=bedrock_client)
+        timings["vision_extract"] = time.time() - t0
 
         if not dishes:
             timings["total"] = sum(timings.values())
@@ -109,10 +103,10 @@ def handler(
                 timings[f"image_{idx}"] = time.time() - img_t0
 
         timings["image_gen_total"] = time.time() - t0
-        timings["total"] = timings["s3_read"] + timings["ocr"] + timings["llm"] + timings["image_gen_total"]
+        timings["total"] = timings["s3_read"] + timings["vision_extract"] + timings["image_gen_total"]
         logger.info("TRACE job=%s timings=%s", job_id, timings)
 
-    except (OCRExtractionError, LLMProcessingError) as exc:
+    except LLMProcessingError as exc:
         logger.error("Pipeline failed for job %s: %s", job_id, exc)
         error_result = MenuResult(
             job_id=job_id,

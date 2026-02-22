@@ -12,7 +12,7 @@ from backend.models import DishRecord
 
 MODEL_ID = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
 
-SYSTEM_PROMPT = """You are a menu analysis assistant. Given raw text extracted from a restaurant menu via OCR, identify each individual dish and extract structured information.
+SYSTEM_PROMPT = """You are a menu analysis assistant. Given a restaurant menu (as text or image), identify each individual dish and extract structured information.
 
 For each dish, provide:
 - original_name: The dish name exactly as it appears on the menu
@@ -133,6 +133,74 @@ def structure_menu(
         raise LLMProcessingError(f"Failed to read Bedrock response: {e}") from e
 
     # Extract text content from Claude's response
+    content_blocks = response_body.get("content", [])
+    text_parts = [
+        block["text"] for block in content_blocks if block.get("type") == "text"
+    ]
+
+    if not text_parts:
+        raise LLMProcessingError("No text content in Bedrock Claude response")
+
+    response_text = "\n".join(text_parts)
+    return parse_llm_response(response_text)
+
+
+def structure_menu_from_image(
+    image_bytes: bytes, bedrock_client=None, media_type: str = "image/jpeg"
+) -> list[DishRecord]:
+    """
+    Sends a menu image directly to Claude for vision-based extraction.
+    Skips OCR entirely — Claude reads the image natively.
+    Returns a list of structured DishRecord objects.
+    """
+    if bedrock_client is None:
+        bedrock_client = boto3.client("bedrock-runtime")
+
+    import base64
+    encoded = base64.b64encode(image_bytes).decode("utf-8")
+
+    request_body = json.dumps(
+        {
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 16384,
+            "system": SYSTEM_PROMPT,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": media_type,
+                                "data": encoded,
+                            },
+                        },
+                        {
+                            "type": "text",
+                            "text": "Extract all dishes from this menu image.",
+                        },
+                    ],
+                }
+            ],
+        }
+    )
+
+    try:
+        response = bedrock_client.invoke_model(
+            modelId=MODEL_ID,
+            contentType="application/json",
+            accept="application/json",
+            body=request_body,
+        )
+    except Exception as e:
+        raise LLMProcessingError(f"Bedrock invoke_model failed: {e}") from e
+
+    try:
+        response_body = json.loads(response["body"].read())
+    except (json.JSONDecodeError, KeyError) as e:
+        raise LLMProcessingError(f"Failed to read Bedrock response: {e}") from e
+
     content_blocks = response_body.get("content", [])
     text_parts = [
         block["text"] for block in content_blocks if block.get("type") == "text"
