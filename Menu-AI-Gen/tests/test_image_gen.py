@@ -175,11 +175,8 @@ class TestGenerateDishImage:
         assert captured["accept"] == "application/json"
 
         sent_body = json.loads(captured["body"])
-        assert sent_body["taskType"] == "TEXT_IMAGE"
-        assert sent_body["imageGenerationConfig"]["numberOfImages"] == 1
-        assert sent_body["imageGenerationConfig"]["height"] == 512
-        assert sent_body["imageGenerationConfig"]["width"] == 512
-        assert "Ramen" in sent_body["textToImageParams"]["text"]
+        assert "prompt" in sent_body
+        assert "Ramen" in sent_body["prompt"]
 
 
 # --- Tests for generate_all_dish_images and retry logic ---

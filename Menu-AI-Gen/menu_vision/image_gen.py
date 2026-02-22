@@ -14,7 +14,7 @@ from botocore.exceptions import ClientError
 
 from menu_vision.models import DishRecord
 
-IMAGE_MODEL_ID = os.environ.get("IMAGE_MODEL_ID", "amazon.titan-image-generator-v2:0")
+IMAGE_MODEL_ID = os.environ.get("IMAGE_MODEL_ID", "stability.stable-image-core-v1:0")
 MAX_WORKERS = int(os.environ.get("IMAGE_GEN_WORKERS", "10"))
 
 logger = logging.getLogger(__name__)
@@ -62,18 +62,7 @@ def generate_dish_image(dish: DishRecord, bedrock_client=None) -> bytes:
 
     prompt = build_image_prompt(dish)
 
-    request_body = json.dumps(
-        {
-            "textToImageParams": {"text": prompt},
-            "taskType": "TEXT_IMAGE",
-            "imageGenerationConfig": {
-                "numberOfImages": 1,
-                "quality": "standard",
-                "height": 512,
-                "width": 512,
-            },
-        }
-    )
+    request_body = json.dumps({"prompt": prompt})
 
     try:
         response = bedrock_client.invoke_model(
